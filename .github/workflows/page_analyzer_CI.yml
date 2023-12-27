@@ -1,9 +1,0 @@
-# Name of workflow
-name: Python CI
-
-on: push
-
-jobs:
-  lint-project:
-    runs-on: ubuntu-latest
-    
