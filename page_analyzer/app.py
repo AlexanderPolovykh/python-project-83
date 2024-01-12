@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, render_template
 from dotenv import load_dotenv
 import os
 
@@ -16,4 +16,5 @@ def hello_world():
     # json_str = json.dumps(config)
     port = os.getenv("TCP_PORT")
     # return f"<p>Hello, World and Earth!<br/><br/>Configuration is {json_str}</p>"
-    return f"<p>Hello, World and Earth!<br/><br/>TCP_PORT = {port}</p>"
+    # return f"<p>Hello, World and Earth!<br/><br/>TCP_PORT = {port}</p>"
+    return render_template("index.html", port=port)
