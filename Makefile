@@ -3,7 +3,7 @@ install:
 	poetry install
 
 dev:
-	poetry run flask --app page_analyzer:app run
+	poetry run flask --debug --app page_analyzer:app run
 
 TCP_PORT ?= 8000
 start:
@@ -11,3 +11,9 @@ start:
 
 lint:
 	poetry run flake8 -v page_analyzer
+
+start_postgres:
+	echo "123" | sudo -S -k service postgresql start
+
+build:
+	./build.sh
