@@ -1,11 +1,13 @@
 from flask import Flask, flash, get_flashed_messages, render_template, request, url_for, redirect
 from dotenv import load_dotenv
 import os
-
 import psycopg2
 from psycopg2.extras import NamedTupleCursor
 import validators
 from datetime import date
+import requests
+
+TIME_OUT_REQUEST = 1.0  # тайм-аут на GET-запрос к сайту
 
 load_dotenv()
 
@@ -22,8 +24,14 @@ def urls_from_db():
             curs.execute(
                 """
                     SELECT id, name, (
-                        SELECT max(created_at) FROM url_checks
+                        SELECT max(created_at) AS last_check FROM url_checks
                         WHERE url_id = urls.id
+                    ),
+                    (
+                        SELECT status_code FROM url_checks
+                        WHERE url_id = urls.id
+                        ORDER BY id DESC
+                        LIMIT 1
                     )
                     FROM urls
                     ORDER BY id DESC;
@@ -92,10 +100,10 @@ def url_check_to_db(id: int, url_check: dict):
             datestr = date.today().isoformat()
             curs.execute(
                 """
-                    INSERT INTO url_checks (url_id, created_at)
-                    VALUES (%s, %s);
+                    INSERT INTO url_checks (url_id, status_code, created_at)
+                    VALUES (%s, %s, %s);
                 """,
-                [id, datestr],
+                [id, url_check.get("status_code"), datestr],
             )
 
 
@@ -145,5 +153,13 @@ def url_get(id):
 @app.post("/urls/<int:id>/checks")
 def url_checks_post(id):
     app.logger.info("url_checks_post(%d)", id)
-    url_check_to_db(id, {})
-    return redirect(url_for("url_get", id=id))
+    url_check = {}
+    url = url_from_db(id)
+    try:
+        r = requests.get(url.name, timeout=TIME_OUT_REQUEST)
+        url_check["status_code"] = r.status_code
+        url_check_to_db(id, url_check)
+        return redirect(url_for("url_get", id=id))
+    except requests.exceptions.RequestException:
+        flash("Произошла ошибка при проверке", category="danger")
+        return redirect(url_for("url_get", id=id))
