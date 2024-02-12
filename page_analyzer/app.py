@@ -46,21 +46,25 @@ def url_from_db(id: int):
             return url
 
 
-def url_to_db(url_name: str) -> bool:
+def url_to_db(urls: list, url_name: str) -> bool:
     app.logger.info("url_to_db()")
+    for url in urls:
+        if url.name == url_name:
+            app.logger.info("url_name: %s", url.name)
+            return False
     with psycopg2.connect(DATABASE_URL) as conn:
         with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
             datestr = date.today().isoformat()
             # app.logger.info("url_name: %s, datestr: %s", url_name, datestr)
-            try:
-                curs.execute(
-                    """
-                        INSERT INTO urls (name, created_at) VALUES ('%s', '%s');
-                    """,
-                    [url_name, datestr],
-                )
-            except Exception:
-                return False
+            # try:
+            curs.execute(
+                """
+                    INSERT INTO urls (name, created_at) VALUES (%s, %s);
+                """,
+                [url_name, datestr],
+            )
+            # except Exception:
+            #     return False
     return True
 
 
@@ -80,7 +84,8 @@ def urls_post():
         flash("Некорректный URL", category="danger")
         return redirect(url_for("url_input_get"))
     else:
-        if url_to_db(new_url):
+        urls = urls_from_db()
+        if url_to_db(urls, new_url):
             flash("Страница успешно добавлена", category="success")
         else:
             flash("Страница уже существует", category="info")

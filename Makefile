@@ -15,5 +15,5 @@ lint:
 start_postgres:
 	echo "123" | sudo -S -k service postgresql start
 
-build: start_postgres
+build:
 	./build.sh
