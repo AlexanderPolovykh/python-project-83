@@ -2,14 +2,25 @@
 
 -- CREATE DATABASE page_analyzer;
 
+DROP TABLE IF EXISTS url_checks;
+
 DROP TABLE IF EXISTS urls;
 
 CREATE TABLE urls (
-    id bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
-    name varchar(255),
-    created_at date,
-    CONSTRAINT urls_pkey PRIMARY KEY (id),
-    CONSTRAINT urls_name_key UNIQUE (name)
+    id integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    name varchar(255) UNIQUE,
+    created_at date
+);
+
+
+CREATE TABLE url_checks (
+    id integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    url_id integer REFERENCES urls (id),
+    status_code smallint,
+    h1 varchar(255),
+    title varchar(255),
+    description varchar(255),
+    created_at date
 );
 
 INSERT INTO urls (name, created_at) 

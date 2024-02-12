@@ -43,7 +43,30 @@
             <th>Дата создания</th>
           </tr>
         </thead>
-        <tbody></tbody>
+        <tbody>
+          {% for url_check in url_checks %}
+          <tr>
+            <td>
+              {{ url_check.id }}
+            </td>
+            <td>
+              {{ url_check.status_code }}
+            </td>
+            <td>
+              {{ url_check.h1 }}
+            </td>
+            <td>
+              {{ url_check.title }}
+            </td>
+            <td>
+              {{ url_check.description }}
+            </td>
+            <td>
+              {{ url_check.created_at }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
       </table>
     </div>
   </div>

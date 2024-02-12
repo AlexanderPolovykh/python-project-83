@@ -19,15 +19,35 @@ def urls_from_db():
     app.logger.info("urls_from_db()")
     with psycopg2.connect(DATABASE_URL) as conn:
         with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
-            # app.logger.info(curs.name)
             curs.execute(
                 """
-                    SELECT * FROM urls
+                    SELECT id, name, (
+                        SELECT max(created_at) FROM url_checks
+                        WHERE url_id = urls.id
+                    )
+                    FROM urls
                     ORDER BY id DESC;
-                """
+                """,
             )
             urls = curs.fetchall()
+            app.logger.info(urls)
             return urls
+
+
+def url_checks_from_db(id: int):
+    app.logger.info("url_checks_from_db()")
+    with psycopg2.connect(DATABASE_URL) as conn:
+        with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
+            curs.execute(
+                """
+                    SELECT * FROM url_checks
+                    WHERE url_id = %s
+                    ORDER BY id DESC;
+                """,
+                [id],
+            )
+            url_checks = curs.fetchall()
+            return url_checks
 
 
 def url_from_db(id: int):
@@ -56,16 +76,27 @@ def url_to_db(urls: list, url_name: str) -> bool:
         with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
             datestr = date.today().isoformat()
             # app.logger.info("url_name: %s, datestr: %s", url_name, datestr)
-            # try:
             curs.execute(
                 """
                     INSERT INTO urls (name, created_at) VALUES (%s, %s);
                 """,
                 [url_name, datestr],
             )
-            # except Exception:
-            #     return False
     return True
+
+
+def url_check_to_db(id: int, url_check: dict):
+    app.logger.info("url_check_to_db()")
+    with psycopg2.connect(DATABASE_URL) as conn:
+        with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
+            datestr = date.today().isoformat()
+            curs.execute(
+                """
+                    INSERT INTO url_checks (url_id, created_at)
+                    VALUES (%s, %s);
+                """,
+                [id, datestr],
+            )
 
 
 @app.get("/")
@@ -105,6 +136,14 @@ def urls_get():
 def url_get(id):
     app.logger.info("url_get(%d)", id)
     url = url_from_db(id)
+    url_checks = url_checks_from_db(id)
     messages = get_flashed_messages(with_categories=True)
     mess = messages[-1] if messages else None
-    return render_template("urls_id.html", message=mess, url=url)
+    return render_template("urls_id.html", message=mess, url=url, url_checks=url_checks)
+
+
+@app.post("/urls/<int:id>/checks")
+def url_checks_post(id):
+    app.logger.info("url_checks_post(%d)", id)
+    url_check_to_db(id, {})
+    return redirect(url_for("url_get", id=id))
