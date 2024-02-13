@@ -7,6 +7,8 @@ import validators
 from datetime import date
 import requests
 from bs4 import BeautifulSoup
+from urllib.parse import urlparse
+import logging
 
 TIME_OUT_REQUEST = 1.0  # тайм-аут на GET-запрос к сайту
 
@@ -15,7 +17,7 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY")
 DATABASE_URL = os.getenv("DATABASE_URL")
-# app.logger.setLevel(logging.DEBUG)
+app.logger.setLevel(logging.DEBUG)
 
 
 def urls_from_db():
@@ -79,10 +81,13 @@ def url_to_db(urls: list, url_name: str) -> tuple:
     """Записать в таблицу urls новую добавленную страницу."""
     app.logger.info("url_to_db()")
     already_exists = False
+    unp = urlparse(url_name)
     for url in urls:
-        if url.name == url_name:  # такая страница уже в базе есть!
+        np = urlparse(url.name)
+        if unp.scheme == np.scheme and unp.netloc == np.netloc:  # такой сайт в базе уже есть!
             app.logger.info("url_name: %s", url.name)
             already_exists = True
+            un = url.name
     with psycopg2.connect(DATABASE_URL) as conn:
         with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
             if not already_exists:
@@ -93,10 +98,12 @@ def url_to_db(urls: list, url_name: str) -> tuple:
                     """,
                     [url_name, datestr],
                 )
-            curs.execute("SELECT id FROM urls WHERE name = %s;", [url_name])
+                curs.execute("SELECT id FROM urls WHERE name = %s;", [url_name])
+            else:
+                curs.execute("SELECT id FROM urls WHERE name = %s;", [un])
             rec = curs.fetchone()
             # app.logger.info("url_to_db() -> id: %d", rec.id)
-    return already_exists, rec.id
+    return already_exists, rec.id if rec else 0
 
 
 def url_check_to_db(id: int, url_check: dict):
