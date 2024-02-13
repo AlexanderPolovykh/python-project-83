@@ -102,7 +102,7 @@ def url_check_to_db(id: int, url_check: dict):
             datestr = date.today().isoformat()
             curs.execute(
                 """
-                    INSERT INTO url_checks 
+                    INSERT INTO url_checks
                     (url_id, status_code, h1, title, description, created_at)
                     VALUES (%s, %s, %s, %s, %s, %s);
                 """,
