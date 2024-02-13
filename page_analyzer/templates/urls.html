@@ -26,9 +26,18 @@
             </td>
 
             <!-- <td>{{ url.created_at }}</td> -->
+            {% if url.last_check %}
             <td>{{ url.last_check }}</td>
+            {% else %}
+            <td></td>
+            {% endif %}
 
+            {% if url.status_code %}
             <td>{{ url.status_code }}</td>
+            {% else %}
+            <td></td>
+            {% endif %}
+
           </tr>
           {% endfor %}
         </tbody>

@@ -39,7 +39,7 @@ def urls_from_db():
                 """,
             )
             urls = curs.fetchall()
-            app.logger.info(urls)
+            # app.logger.info(urls)
             return urls
 
 
@@ -75,23 +75,28 @@ def url_from_db(id: int):
             return url
 
 
-def url_to_db(urls: list, url_name: str) -> bool:
+def url_to_db(urls: list, url_name: str) -> tuple:
+    """Записать в таблицу urls новую добавленную страницу."""
     app.logger.info("url_to_db()")
+    already_exists = False
     for url in urls:
-        if url.name == url_name:
+        if url.name == url_name:  # такая страница уже в базе есть!
             app.logger.info("url_name: %s", url.name)
-            return False
+            already_exists = True
     with psycopg2.connect(DATABASE_URL) as conn:
         with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
-            datestr = date.today().isoformat()
-            # app.logger.info("url_name: %s, datestr: %s", url_name, datestr)
-            curs.execute(
-                """
-                    INSERT INTO urls (name, created_at) VALUES (%s, %s);
-                """,
-                [url_name, datestr],
-            )
-    return True
+            if not already_exists:
+                datestr = date.today().isoformat()
+                curs.execute(
+                    """
+                        INSERT INTO urls (name, created_at) VALUES (%s, %s);
+                    """,
+                    [url_name, datestr],
+                )
+            curs.execute("SELECT id FROM urls WHERE name = %s;", [url_name])
+            rec = curs.fetchone()
+            # app.logger.info("url_to_db() -> id: %d", rec.id)
+    return already_exists, rec.id
 
 
 def url_check_to_db(id: int, url_check: dict):
@@ -134,11 +139,13 @@ def urls_post():
         return redirect(url_for("url_input_get"))
     else:
         urls = urls_from_db()
-        if url_to_db(urls, new_url):
+        exists, id = url_to_db(urls, new_url)
+        # app.logger.info("id: %d", id)
+        if not exists:
             flash("Страница успешно добавлена", category="success")
         else:
             flash("Страница уже существует", category="info")
-        return redirect(url_for("urls_get"))
+        return redirect(url_for("url_get", id=id))
 
 
 @app.get("/urls")
@@ -168,15 +175,16 @@ def url_checks_post(id):
     try:
         r = requests.get(url.name, timeout=TIME_OUT_REQUEST)
         soup = BeautifulSoup(r.text, "html.parser")
-        if soup.h1:
-            url_check["h1"] = soup.h1.string
-            app.logger.info("h1: %s", url_check.get("h1"))
-        if soup.title:
-            url_check["title"] = soup.title.string
-        if soup.meta and soup.meta.get("name") == "description":
-            url_check["description"] = soup.meta.get("content")
+        url_check["h1"] = soup.h1.string if soup.h1 else ""
+        url_check["title"] = soup.title.string if soup.title else ""
+        metas = soup.find_all("meta")
+        url_check["description"] = ""
+        for meta in metas:
+            if meta.get("name") == "description":
+                url_check["description"] = meta.get("content")
         url_check["status_code"] = r.status_code
         url_check_to_db(id, url_check)
+        flash("Страница успешно проверена", category="success")
         return redirect(url_for("url_get", id=id))
     except requests.exceptions.RequestException:
         flash("Произошла ошибка при проверке", category="danger")
