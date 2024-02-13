@@ -206,6 +206,7 @@ def url_checks_post(id):
         url_check_to_db(id, url_check)
         flash("Страница успешно проверена", category="success")
         return redirect(url_for("url_get", id=id))
-    except requests.exceptions.RequestException:
+    # except requests.exceptions.RequestException:
+    except Exception:
         flash("Произошла ошибка при проверке", category="danger")
         return redirect(url_for("url_get", id=id))
