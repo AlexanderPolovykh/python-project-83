@@ -193,7 +193,7 @@ def url_checks_post(id):
     url_check = {}
     url = url_from_db(id)
     try:
-        r = requests.get(url.name, timeout=TIME_OUT_REQUEST)
+        r = requests.get(url.name)  # , timeout=TIME_OUT_REQUEST)
         soup = BeautifulSoup(r.text, "html.parser")
         url_check["h1"] = soup.h1.string if soup.h1 else ""
         url_check["title"] = soup.title.string if soup.title else ""
