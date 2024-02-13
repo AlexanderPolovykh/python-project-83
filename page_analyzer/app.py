@@ -6,6 +6,7 @@ from psycopg2.extras import NamedTupleCursor
 import validators
 from datetime import date
 import requests
+from bs4 import BeautifulSoup
 
 TIME_OUT_REQUEST = 1.0  # тайм-аут на GET-запрос к сайту
 
@@ -94,16 +95,25 @@ def url_to_db(urls: list, url_name: str) -> bool:
 
 
 def url_check_to_db(id: int, url_check: dict):
+    """Записать в таблицу url_checks результат SEO-проверки сайта."""
     app.logger.info("url_check_to_db()")
     with psycopg2.connect(DATABASE_URL) as conn:
         with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
             datestr = date.today().isoformat()
             curs.execute(
                 """
-                    INSERT INTO url_checks (url_id, status_code, created_at)
-                    VALUES (%s, %s, %s);
+                    INSERT INTO url_checks 
+                    (url_id, status_code, h1, title, description, created_at)
+                    VALUES (%s, %s, %s, %s, %s, %s);
                 """,
-                [id, url_check.get("status_code"), datestr],
+                [
+                    id,
+                    url_check.get("status_code"),
+                    url_check.get("h1"),
+                    url_check.get("title"),
+                    url_check.get("description"),
+                    datestr,
+                ],
             )
 
 
@@ -157,6 +167,14 @@ def url_checks_post(id):
     url = url_from_db(id)
     try:
         r = requests.get(url.name, timeout=TIME_OUT_REQUEST)
+        soup = BeautifulSoup(r.text, "html.parser")
+        if soup.h1:
+            url_check["h1"] = soup.h1.string
+            app.logger.info("h1: %s", url_check.get("h1"))
+        if soup.title:
+            url_check["title"] = soup.title.string
+        if soup.meta and soup.meta.get("name") == "description":
+            url_check["description"] = soup.meta.get("content")
         url_check["status_code"] = r.status_code
         url_check_to_db(id, url_check)
         return redirect(url_for("url_get", id=id))
