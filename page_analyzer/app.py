@@ -1,4 +1,13 @@
-from flask import Flask, flash, get_flashed_messages, render_template, request, url_for, redirect
+from flask import (
+    Flask,
+    flash,
+    get_flashed_messages,
+    render_template,
+    request,
+    url_for,
+    redirect,
+    make_response,
+)
 from dotenv import load_dotenv
 import os
 import psycopg2
@@ -142,8 +151,12 @@ def urls_post():
     app.logger.info("urls_post()")
     new_url = request.form.get("url")
     if len(new_url) > 255 or not validators.url(new_url):
-        flash("Некорректный URL", category="danger")
-        return redirect(url_for("url_input_get"))
+        mess = ("danger", "Некорректный URL")
+        resp = make_response(render_template("index.html", message=mess))
+        # flash("Некорректный URL", category="danger")
+        # resp = make_response(redirect(url_for("url_input_get"), 422))
+        resp.status = 422
+        return resp
     else:
         urls = urls_from_db()
         exists, id = url_to_db(urls, new_url)
