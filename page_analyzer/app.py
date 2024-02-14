@@ -212,8 +212,9 @@ def url_checks_post(id):
         app.logger.info("before redirect..")
         flash("Страница успешно проверена", category="success")
         return redirect(url_for("url_get", id=id))
-    # except requests.exceptions.RequestException:
-    except Exception as ex:
-        app.logger.info("raised Exception %s", ex)
+    except requests.exceptions.RequestException as ex:
+        # except Exception as ex:
+        # app.logger.info("raised Exception %s", ex)
+        app.logger.error('Отловлено исключение %s при запросе GET()!', type(ex))
         flash("Произошла ошибка при проверке", category="danger")
         return redirect(url_for("url_get", id=id))
