@@ -17,7 +17,7 @@ from datetime import date
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse
-import logging
+# import logging
 
 TIME_OUT_REQUEST = 1.0  # тайм-аут на GET-запрос к сайту
 
@@ -26,11 +26,11 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY")
 DATABASE_URL = os.getenv("DATABASE_URL")
-app.logger.setLevel(logging.DEBUG)
+# app.logger.setLevel(logging.ERROR)
 
 
 def urls_from_db():
-    app.logger.info("urls_from_db()")
+    # app.logger.info("urls_from_db()")
     with psycopg2.connect(DATABASE_URL) as conn:
         with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
             curs.execute(
@@ -55,7 +55,7 @@ def urls_from_db():
 
 
 def url_checks_from_db(id: int):
-    app.logger.info("url_checks_from_db()")
+    # app.logger.info("url_checks_from_db()")
     with psycopg2.connect(DATABASE_URL) as conn:
         with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
             curs.execute(
@@ -71,7 +71,7 @@ def url_checks_from_db(id: int):
 
 
 def url_from_db(id: int):
-    app.logger.info("url_from_db(%d)", id)
+    # app.logger.info("url_from_db(%d)", id)
     with psycopg2.connect(DATABASE_URL) as conn:
         with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
             # app.logger.info("id: %d", id)
@@ -88,13 +88,13 @@ def url_from_db(id: int):
 
 def url_to_db(urls: list, url_name: str) -> tuple:
     """Записать в таблицу urls новую добавленную страницу."""
-    app.logger.info("url_to_db()")
+    # app.logger.info("url_to_db()")
     already_exists = False
     unp = urlparse(url_name)
     for url in urls:
         np = urlparse(url.name)
         if unp.scheme == np.scheme and unp.netloc == np.netloc:  # такой сайт в базе уже есть!
-            app.logger.info("url_name: %s", url.name)
+            # app.logger.info("url_name: %s", url.name)
             already_exists = True
             un = url.name
     with psycopg2.connect(DATABASE_URL) as conn:
@@ -117,7 +117,7 @@ def url_to_db(urls: list, url_name: str) -> tuple:
 
 def url_check_to_db(id: int, url_check: dict):
     """Записать в таблицу url_checks результат SEO-проверки сайта."""
-    app.logger.info("url_check_to_db()")
+    # app.logger.info("url_check_to_db()")
     with psycopg2.connect(DATABASE_URL) as conn:
         with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
             datestr = date.today().isoformat()
@@ -140,7 +140,7 @@ def url_check_to_db(id: int, url_check: dict):
 
 @app.get("/")
 def url_input_get():
-    app.logger.info("url_input_get()")
+    app.logger.info("GET /")
     messages = get_flashed_messages(with_categories=True)
     mess = messages[-1] if messages else None
     return render_template("index.html", message=mess)
@@ -148,7 +148,7 @@ def url_input_get():
 
 @app.post("/urls")
 def urls_post():
-    app.logger.info("urls_post()")
+    app.logger.info("POST /urls")
     new_url = request.form.get("url")
     if len(new_url) > 255 or not validators.url(new_url):
         mess = ("danger", "Некорректный URL")
@@ -170,7 +170,7 @@ def urls_post():
 
 @app.get("/urls")
 def urls_get():
-    app.logger.info("urls_get()")
+    app.logger.info("GET /urls")
     urls = urls_from_db()
     messages = get_flashed_messages(with_categories=True)
     mess = messages[-1] if messages else None
@@ -179,7 +179,7 @@ def urls_get():
 
 @app.get("/urls/<int:id>")
 def url_get(id):
-    app.logger.info("url_get(%d)", id)
+    app.logger.info("GET /urls/%d", id)
     url = url_from_db(id)
     url_checks = url_checks_from_db(id)
     messages = get_flashed_messages(with_categories=True)
@@ -189,11 +189,13 @@ def url_get(id):
 
 @app.post("/urls/<int:id>/checks")
 def url_checks_post(id):
-    app.logger.info("url_checks_post(%d)", id)
+    app.logger.info("POST /urls/%d/checks", id)
     url_check = {}
     url = url_from_db(id)
     try:
+        app.logger.info("before requests..")
         r = requests.get(url.name)  # , timeout=TIME_OUT_REQUEST)
+        app.logger.info("after requests..")
         soup = BeautifulSoup(r.text, "html.parser")
         url_check["h1"] = soup.h1.string if soup.h1 else ""
         url_check["title"] = soup.title.string if soup.title else ""
@@ -203,10 +205,13 @@ def url_checks_post(id):
             if meta.get("name") == "description":
                 url_check["description"] = meta.get("content")
         url_check["status_code"] = r.status_code
+        app.logger.info("after parsers..")
         url_check_to_db(id, url_check)
+        app.logger.info("before redirect..")
         flash("Страница успешно проверена", category="success")
         return redirect(url_for("url_get", id=id))
     # except requests.exceptions.RequestException:
     except Exception:
+        app.logger.info("raised Exception..")
         flash("Произошла ошибка при проверке", category="danger")
         return redirect(url_for("url_get", id=id))
