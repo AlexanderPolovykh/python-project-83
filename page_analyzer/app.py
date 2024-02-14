@@ -193,7 +193,7 @@ def url_checks_post(id):
     url_check = {}
     url = url_from_db(id)
     try:
-        app.logger.info("before requests..")
+        app.logger.info("before requests GET %s", url.name)
         r = requests.get(url.name)  # , timeout=TIME_OUT_REQUEST)
         app.logger.info("after requests..")
         soup = BeautifulSoup(r.text, "html.parser")
