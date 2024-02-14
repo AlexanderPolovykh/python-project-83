@@ -17,7 +17,7 @@ from datetime import date
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse
-# import logging
+import logging
 
 TIME_OUT_REQUEST = 1.0  # тайм-аут на GET-запрос к сайту
 
@@ -26,7 +26,7 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY")
 DATABASE_URL = os.getenv("DATABASE_URL")
-# app.logger.setLevel(logging.ERROR)
+app.logger.setLevel(logging.DEBUG)
 
 
 def urls_from_db():
