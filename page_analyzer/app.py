@@ -195,7 +195,7 @@ def url_checks_post(id):
     try:
         app.logger.info("before requests GET %s", url.name)
         r = requests.get(url.name)  # , timeout=TIME_OUT_REQUEST)
-        app.logger.info("after requests..")
+        app.logger.info("after requests.. status_code: %d", r.status_code)
         r.raise_for_status()
         app.logger.info("after raise_for_status..")
         soup = BeautifulSoup(r.text, "html.parser")
