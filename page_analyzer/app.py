@@ -196,6 +196,8 @@ def url_checks_post(id):
         app.logger.info("before requests GET %s", url.name)
         r = requests.get(url.name)  # , timeout=TIME_OUT_REQUEST)
         app.logger.info("after requests..")
+        r.raise_for_status()
+        app.logger.info("after raise_for_status..")
         soup = BeautifulSoup(r.text, "html.parser")
         url_check["h1"] = soup.h1.string if soup.h1 else ""
         url_check["title"] = soup.title.string if soup.title else ""
@@ -211,7 +213,7 @@ def url_checks_post(id):
         flash("Страница успешно проверена", category="success")
         return redirect(url_for("url_get", id=id))
     # except requests.exceptions.RequestException:
-    except Exception:
-        app.logger.info("raised Exception..")
+    except Exception as ex:
+        app.logger.info("raised Exception %s", ex)
         flash("Произошла ошибка при проверке", category="danger")
         return redirect(url_for("url_get", id=id))
